@@ -473,14 +473,11 @@ function buildBaseLists({ landing, lowCostNodes, countryGroupNames, nonLandingNo
     );
 
     /**
-     * "前置代理"候选列表：优先国家节点组、DIRECT
-     * 再拼接所有非落地节点名称枚举
+     * "前置代理"候选列表：枚举所有非落地节点，末尾附加 "DIRECT" 字面量。
+     * 不引用任何 include-all 组或 "直连" 组，避免 Stash 静态 loop 检测通过
+     * 组引用间接追溯到落地节点（落地节点的 dialer-proxy 指回本组）。
      */
-    const frontProxySelector = buildList(
-        countryGroupNames,
-        PROXY_GROUPS.DIRECT,
-        !regexFilter && nonLandingNodes
-    );
+    const frontProxySelector = buildList(nonLandingNodes, "DIRECT");
 
     return {
         defaultProxies,
@@ -699,18 +696,7 @@ function buildProxyGroups({
                   name: PROXY_GROUPS.FRONT_PROXY,
                   icon: `${CDN_URL}/gh/Koolson/Qure@master/IconSet/Color/Area.png`,
                   type: "select",
-                  /**
-                   * regex 模式：`include-all` 拉取所有节点，`exclude-filter` 排除落地节点，
-                   * 同时在 `proxies` 里附加手动指定的候选组名列表（各国家组等）。
-                   * 枚举模式：直接列出候选组名（落地节点已在构建 `frontProxySelector` 时过滤）。
-                   */
-                  ...(regexFilter
-                      ? {
-                            "include-all": true,
-                            "exclude-filter": LANDING_PATTERN,
-                            proxies: frontProxySelector,
-                        }
-                      : { proxies: frontProxySelector }),
+                  proxies: frontProxySelector,
               }
             : null,
         landing
